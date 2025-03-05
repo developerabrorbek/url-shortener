@@ -11,7 +11,7 @@ Asosiy modellar:
         password
 
     URL:
-        originalURL
+        originalUrl
         code
         userId
         createdAt
