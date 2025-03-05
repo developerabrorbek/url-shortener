@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "name": "Tomas Shelbi",
+    "email": "mafia01@gmail.com",
+    "password": "killer"
+  },
+  {
+    "id": 2,
+    "name": "Tomas Shelbi",
+    "email": "mafia012@gmail.com",
+    "password": "killer1"
+  }
+]
