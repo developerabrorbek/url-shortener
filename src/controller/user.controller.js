@@ -1,64 +1,66 @@
-const path = require("node:path");
-const { readJSONFile, writeJSONFile } = require("../helpers/fs");
+const pool = require("../config/db.config");
 
-exports.getAllUsers = (req, res) => {
-  const filePath = path.join(__dirname, "..", "data", "users.json");
-  const users = readJSONFile(filePath);
+exports.getAllUsers = async (req, res) => {
+  const users = await pool.query(`SELECT * FROM users`);
 
-  res.send(users);
+  res.send({
+    message: "Success ✅",
+    count: users.rowCount,
+    data: users.rows,
+  });
 };
 
-exports.register = (req, res) => {
+exports.register = async (req, res) => {
   const { name, email, password } = req.body;
 
-  const filePath = path.join(__dirname, "..", "data", "users.json");
-  const users = readJSONFile(filePath);
-
-  const foundedUser = users.find(
-    (us) => us.email === email && us.password == password
+  const foundedUser = await pool.query(
+    `SELECT * FROM users WHERE email = $1 AND password = $2`,
+    [email, password]
   );
 
-  if (foundedUser) {
+  if (foundedUser.rowCount) {
     res.status(409).send({
       message: "Bunday email va passwordlik user allaqachon bor",
     });
     return;
   }
 
-  const newUser = {
-    id: users.at(-1)?.id + 1 || 1,
-    name,
-    email,
-    password,
-  };
-  users.push(newUser);
-
-  writeJSONFile(filePath, users);
-
-  res.redirect("/")
-};
-
-exports.login = (req, res) => {
-  const { email, password } = req.body;
-
-  const filePath = path.join(__dirname, "..", "data", "users.json");
-  const users = readJSONFile(filePath);
-
-  const foundedUser = users.find(
-    (us) => us.email === email && us.password == password
+  await pool.query(
+    `INSERT INTO users (name, email, password) VALUES ($1, $2, $3)`,
+    [name, email, password]
   );
 
-  if (!foundedUser) {
+  // res.redirect("/");
+
+  res.status(201).send({
+    message: "Ro'yhatdan o'tkazildi✅"
+  })
+};
+
+exports.login = async (req, res) => {
+  const { email, password } = req.body;
+
+  const foundedUser = await pool.query(
+    `SELECT * FROM users WHERE email = $1 AND password = $2`,
+    [email, password]
+  );
+
+  if (!foundedUser.rowCount) {
     res.status(404).send({
       message: "Bunday foydalanuvchi mavjud emas!",
     });
     return;
   }
 
-  res.redirect("/");
+  // res.redirect("/");
+
+  res.send({
+    message: "Success✅",
+    data: foundedUser.rows
+  })
 };
 
-exports.deleteUser = (req, res) => {
+exports.deleteUser = async (req, res) => {
   const { id } = req.params;
 
   if (isNaN(Number(id))) {
@@ -68,20 +70,7 @@ exports.deleteUser = (req, res) => {
     return;
   }
 
-  const filePath = path.join(__dirname, "..", "data", "users.json");
-  const users = readJSONFile(filePath);
-
-  const foundedUserIndex = users.findIndex((us) => us.id == id);
-
-  if (foundedUserIndex === -1) {
-    return res.status(404).send({
-      message: "Bunday ID'lik foydalanuvchi topilmadi",
-    });
-  }
-
-  users.splice(foundedUserIndex, 1);
-
-  writeJSONFile(filePath, users);
+  await pool.query(`DELETE FROM users WHERE id = $1`, [id])
 
   res.status(204).send();
 };
