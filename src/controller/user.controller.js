@@ -6,6 +6,8 @@ exports.getAllUsers = async (req, res) => {
     page = 1,
     sortField = "id",
     sortOrder = "ASC",
+    min_money,
+    max_money,
   } = req.query;
 
   if (!(Number(limit) && Number(page))) {
@@ -14,7 +16,7 @@ exports.getAllUsers = async (req, res) => {
     });
   }
 
-  const possibleFields = ["id", "name", "email"];
+  const possibleFields = ["id", "name", "email", "money", "gender"];
   const possibleOrders = ["ASC", "DESC"];
 
   if (
@@ -28,10 +30,32 @@ exports.getAllUsers = async (req, res) => {
     });
   }
 
-  const allUsersCount = await pool.query(`SELECT Count(*) FROM users`);
+    // money -> 1-usul:300~500    2-usul: min_money=300&max_money=600
+    let filterText = "WHERE"
+    if(min_money) {
+      if(!Number(min_money)) {
+        return res.status(400).send({
+          message: `Min_money: ${min_money} xato yuborildi`,
+        })
+      }
+
+      filterText += ` money > ${min_money} `
+    }
+
+    if(max_money) {
+      if(!Number(max_money)) {
+        return res.status(400).send({
+          message: `Max_money: ${max_money} xato yuborildi`,
+        })
+      }
+
+      filterText += filterText === "WHERE" ? ` money < ${max_money} ` : `AND money < ${max_money} `
+    }
+
+  const allUsersCount = await pool.query(`SELECT COUNT(*) FROM users ${filterText}`);
 
   const users = await pool.query(
-    `SELECT * FROM users ORDER BY ${sortField} ${sortOrder} LIMIT $1 OFFSET $2`,
+    `SELECT * FROM users ${filterText} ORDER BY ${sortField} ${sortOrder} LIMIT $1 OFFSET $2`,
     [limit, (page - 1) * limit]
   );
 
