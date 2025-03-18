@@ -1,11 +1,45 @@
 const pool = require("../config/db.config");
 
 exports.getAllUsers = async (req, res) => {
-  const users = await pool.query(`SELECT * FROM users`);
+  const {
+    limit = 10,
+    page = 1,
+    sortField = "id",
+    sortOrder = "ASC",
+  } = req.query;
+
+  if (!(Number(limit) && Number(page))) {
+    return res.status(400).send({
+      message: `Limit: ${limit} yoki page: ${page} xato yuborildi`,
+    });
+  }
+
+  const possibleFields = ["id", "name", "email"];
+  const possibleOrders = ["ASC", "DESC"];
+
+  if (
+    !(
+      possibleFields.some((f) => f == sortField) &&
+      possibleOrders.some((or) => or == sortOrder)
+    )
+  ) {
+    return res.status(400).send({
+      message: `Sort field: ${sortField} yoki sort order: ${sortOrder} xato yuborildi`,
+    });
+  }
+
+  const allUsersCount = await pool.query(`SELECT Count(*) FROM users`);
+
+  const users = await pool.query(
+    `SELECT * FROM users ORDER BY ${sortField} ${sortOrder} LIMIT $1 OFFSET $2`,
+    [limit, (page - 1) * limit]
+  );
 
   res.send({
     message: "Success ✅",
-    count: users.rowCount,
+    limit: Number(limit),
+    page: Number(page),
+    count: +allUsersCount.rows[0].count,
     data: users.rows,
   });
 };
@@ -33,8 +67,8 @@ exports.register = async (req, res) => {
   // res.redirect("/");
 
   res.status(201).send({
-    message: "Ro'yhatdan o'tkazildi✅"
-  })
+    message: "Ro'yhatdan o'tkazildi✅",
+  });
 };
 
 exports.login = async (req, res) => {
@@ -56,8 +90,8 @@ exports.login = async (req, res) => {
 
   res.send({
     message: "Success✅",
-    data: foundedUser.rows
-  })
+    data: foundedUser.rows,
+  });
 };
 
 exports.deleteUser = async (req, res) => {
@@ -70,7 +104,7 @@ exports.deleteUser = async (req, res) => {
     return;
   }
 
-  await pool.query(`DELETE FROM users WHERE id = $1`, [id])
+  await pool.query(`DELETE FROM users WHERE id = $1`, [id]);
 
   res.status(204).send();
 };
